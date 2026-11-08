@@ -73,62 +73,177 @@ adminRouter.post("/change-password", async (req, res) => {
   res.json({ ok: true, message: "Password berhasil diubah" });
 });
 
+function zodFirstError(error: z.ZodError): string {
+  const flat = error.flatten();
+  const fromForm = flat.formErrors[0];
+  if (fromForm) return fromForm;
+  for (const [, msgs] of Object.entries(flat.fieldErrors)) {
+    if (msgs?.[0]) return msgs[0];
+  }
+  return "Data jadwal tidak valid. Periksa ruang, judul, dan waktu.";
+}
+
 const bookingSchema = z.object({
-  roomId: z.string(),
-  title: z.string().min(1),
-  organizer: z.string().optional(),
-  department: z.string().optional(),
-  description: z.string().optional(),
-  startAt: z.string().datetime(),
-  endAt: z.string().datetime(),
+  roomId: z.string().min(1, "Pilih ruang"),
+  title: z.string().min(1, "Judul rapat wajib diisi"),
+  organizer: z.string().nullish(),
+  department: z.string().nullish(),
+  description: z.string().nullish(),
+  startAt: z.string().datetime({ message: "Waktu mulai tidak valid" }),
+  endAt: z.string().datetime({ message: "Waktu selesai tidak valid" }),
+});
+
+adminRouter.get("/bookings/rekap", async (req, res) => {
+  const now = new Date();
+  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+  const defaultTo = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+  );
+
+  const from = req.query.from
+    ? new Date(String(req.query.from))
+    : defaultFrom;
+  const to = req.query.to ? new Date(String(req.query.to)) : defaultTo;
+  const roomId = req.query.roomId ? String(req.query.roomId) : undefined;
+
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+    res.status(400).json({ error: "Rentang tanggal tidak valid" });
+    return;
+  }
+
+  const bookings = await prisma.booking.findMany({
+    where: {
+      startAt: { gte: from, lte: to },
+      ...(roomId ? { roomId } : {}),
+    },
+    include: { room: true },
+    orderBy: { startAt: "desc" },
+  });
+
+  res.json({
+    from: from.toISOString(),
+    to: to.toISOString(),
+    total: bookings.length,
+    bookings,
+  });
 });
 
 adminRouter.get("/bookings", async (req, res) => {
-  const from = req.query.from
-    ? new Date(String(req.query.from))
-    : new Date(new Date().setHours(0, 0, 0, 0));
+  const now = new Date();
   const to = req.query.to
     ? new Date(String(req.query.to))
     : new Date(new Date().setDate(new Date().getDate() + 14));
 
   const bookings = await prisma.booking.findMany({
-    where: { startAt: { gte: from, lte: to } },
+    where: {
+      /** Sembunyikan rapat yang sudah selesai (waktu selesai lewat). */
+      endAt: { gt: now },
+      startAt: { lte: to },
+    },
     include: { room: true },
     orderBy: { startAt: "asc" },
   });
   res.json(bookings);
 });
 
-adminRouter.post("/bookings", async (req, res) => {
-  const parsed = bookingSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
-    return;
-  }
-  const { startAt, endAt, ...rest } = parsed.data;
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  if (end <= start) {
-    res.status(400).json({ error: "Waktu selesai harus setelah mulai" });
-    return;
-  }
-
+async function assertNoOverlap(
+  roomId: string,
+  start: Date,
+  end: Date,
+  exceptId?: string
+) {
   const overlap = await prisma.booking.findFirst({
     where: {
-      roomId: rest.roomId,
+      roomId,
+      ...(exceptId ? { id: { not: exceptId } } : {}),
       startAt: { lt: end },
       endAt: { gt: start },
     },
   });
-  if (overlap) {
+  return overlap;
+}
+
+function parseBookingPayload(body: unknown) {
+  const parsed = bookingSchema.safeParse(body);
+  if (!parsed.success) {
+    return { error: zodFirstError(parsed.error) as string };
+  }
+  const { startAt, endAt, organizer, department, description, ...rest } =
+    parsed.data;
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  if (end <= start) {
+    return { error: "Waktu selesai harus setelah mulai" };
+  }
+  return { rest, organizer, department, description, start, end };
+}
+
+adminRouter.post("/bookings", async (req, res) => {
+  const payload = parseBookingPayload(req.body);
+  if ("error" in payload) {
+    res.status(400).json({ error: payload.error });
+    return;
+  }
+  const { rest, organizer, department, description, start, end } = payload;
+
+  if (await assertNoOverlap(rest.roomId, start, end)) {
     res.status(409).json({ error: "Jadwal bentrok dengan pemakaian lain" });
     return;
   }
 
   const booking = await prisma.booking.create({
-    data: { ...rest, startAt: start, endAt: end },
+    data: {
+      ...rest,
+      organizer: organizer ?? null,
+      department: department ?? null,
+      description: description ?? null,
+      startAt: start,
+      endAt: end,
+    },
   });
   res.status(201).json(booking);
+});
+
+adminRouter.patch("/bookings/:id", async (req, res) => {
+  const existing = await prisma.booking.findUnique({
+    where: { id: req.params.id },
+  });
+  if (!existing) {
+    res.status(404).json({ error: "Jadwal tidak ditemukan" });
+    return;
+  }
+
+  const payload = parseBookingPayload(req.body);
+  if ("error" in payload) {
+    res.status(400).json({ error: payload.error });
+    return;
+  }
+  const { rest, organizer, department, description, start, end } = payload;
+
+  if (await assertNoOverlap(rest.roomId, start, end, req.params.id)) {
+    res.status(409).json({ error: "Jadwal bentrok dengan pemakaian lain" });
+    return;
+  }
+
+  const booking = await prisma.booking.update({
+    where: { id: req.params.id },
+    data: {
+      ...rest,
+      organizer: organizer ?? null,
+      department: department ?? null,
+      description: description ?? null,
+      startAt: start,
+      endAt: end,
+    },
+    include: { room: true },
+  });
+  res.json(booking);
 });
 
 adminRouter.delete("/bookings/:id", async (req, res) => {

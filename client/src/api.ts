@@ -1,4 +1,5 @@
 import { authHeaders } from "./lib/authSession";
+import { messageFromApiError } from "./lib/apiError";
 
 export type RoomStatus = "kosong" | "berlangsung" | "akan_datang";
 
@@ -38,6 +39,7 @@ const base = "";
 export async function fetchRooms(): Promise<{
   serverTime: string;
   rooms: RoomSummary[];
+  ticker?: string;
 }> {
   const res = await fetch(`${base}/api/rooms`);
   if (!res.ok) throw new Error("Gagal memuat ruang");
@@ -54,7 +56,7 @@ export async function loginAdmin(
     body: JSON.stringify({ username, password }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Login gagal");
+  if (!res.ok) throw new Error(messageFromApiError(body, "Login gagal"));
   return body;
 }
 
@@ -63,7 +65,7 @@ export async function fetchAdminRooms(): Promise<RoomRecord[]> {
     headers: { ...authHeaders() },
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Gagal memuat ruang");
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal memuat ruang"));
   return body;
 }
 
@@ -77,12 +79,20 @@ export async function changeAdminPassword(
     body: JSON.stringify({ currentPassword, newPassword }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Gagal mengubah password");
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal mengubah password"));
 }
 
-export async function createBooking(
-  data: Omit<Booking, "id">
-): Promise<Booking> {
+export type CreateBookingInput = {
+  roomId: string;
+  title: string;
+  organizer?: string | null;
+  department?: string | null;
+  description?: string | null;
+  startAt: string;
+  endAt: string;
+};
+
+export async function createBooking(data: CreateBookingInput): Promise<Booking> {
   const res = await fetch(`${base}/api/admin/bookings`, {
     method: "POST",
     headers: {
@@ -92,7 +102,24 @@ export async function createBooking(
     body: JSON.stringify(data),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Gagal menyimpan");
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal menyimpan"));
+  return body;
+}
+
+export async function updateBooking(
+  id: string,
+  data: CreateBookingInput
+): Promise<AdminBooking> {
+  const res = await fetch(`${base}/api/admin/bookings/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal menyimpan perubahan"));
   return body;
 }
 
@@ -108,21 +135,43 @@ export interface AdminBooking extends Booking {
   room: { id: string; name: string; slug: string };
 }
 
+export interface BookingRekapResponse {
+  from: string;
+  to: string;
+  total: number;
+  bookings: AdminBooking[];
+}
+
+export async function fetchBookingRekap(params: {
+  from: string;
+  to: string;
+  roomId?: string;
+}): Promise<BookingRekapResponse> {
+  const q = new URLSearchParams({
+    from: params.from,
+    to: params.to,
+  });
+  if (params.roomId) q.set("roomId", params.roomId);
+  const res = await fetch(`${base}/api/admin/bookings/rekap?${q}`, {
+    headers: { ...authHeaders() },
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal memuat rekap"));
+  return body;
+}
+
 export async function fetchAdminBookings(
   daysAhead = 14
 ): Promise<AdminBooking[]> {
-  const from = new Date();
-  from.setHours(0, 0, 0, 0);
-  const to = new Date(from);
+  const to = new Date();
   to.setDate(to.getDate() + daysAhead);
   const q = new URLSearchParams({
-    from: from.toISOString(),
     to: to.toISOString(),
   });
   const res = await fetch(`${base}/api/admin/bookings?${q}`, {
     headers: { ...authHeaders() },
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Gagal memuat jadwal");
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal memuat jadwal"));
   return body;
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { getRoomStatus } from "../lib/roomStatus.js";
+import { buildViewerTicker } from "../lib/viewerTicker.js";
 
 export const roomsRouter = Router();
 
@@ -26,7 +27,11 @@ roomsRouter.get("/", async (_req, res) => {
     };
   });
 
-  res.json({ serverTime: now.toISOString(), rooms: payload });
+  res.json({
+    serverTime: now.toISOString(),
+    rooms: payload,
+    ticker: buildViewerTicker(now, rooms, bookings),
+  });
 });
 
 roomsRouter.get("/:slug", async (req, res) => {

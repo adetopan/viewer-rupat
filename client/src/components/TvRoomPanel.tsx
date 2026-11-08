@@ -49,6 +49,7 @@ export function TvRoomPanel({ room }: { room: RoomSummary }) {
       className={`tv-panel tv-panel--${room.status}`}
       aria-label={`${room.name}, ${statusLabel(room.status)}`}
     >
+      <div className="tv-panel__accent" aria-hidden="true" />
       <header className="tv-panel__head">
         <h2 className="tv-panel__room">{room.name}</h2>
         <span className={`badge badge--${room.status}`}>

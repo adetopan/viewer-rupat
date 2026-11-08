@@ -1,4 +1,4 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, NavLink } from "react-router-dom";
 
 export function AdminLayout() {
   return (
@@ -11,9 +11,34 @@ export function AdminLayout() {
             <p>Input &amp; kelola jadwal ruang rapat</p>
           </div>
         </div>
-        <nav className="nav-links">
-          <Link to="/" className="btn-ghost">
-            Buka tampilan TV
+        <nav className="nav-links admin-nav">
+          <NavLink
+            to="/admin"
+            end
+            className={({ isActive }) =>
+              `admin-nav__link${isActive ? " admin-nav__link--active" : ""}`
+            }
+          >
+            Kelola jadwal
+          </NavLink>
+          <NavLink
+            to="/admin/rekap"
+            className={({ isActive }) =>
+              `admin-nav__link${isActive ? " admin-nav__link--active" : ""}`
+            }
+          >
+            Rekap jadwal
+          </NavLink>
+          <NavLink
+            to="/admin/pengaturan"
+            className={({ isActive }) =>
+              `admin-nav__link${isActive ? " admin-nav__link--active" : ""}`
+            }
+          >
+            Pengaturan
+          </NavLink>
+          <Link to="/" className="btn-ghost btn-ghost--accent">
+            Lihat tampilan TV →
           </Link>
         </nav>
       </header>

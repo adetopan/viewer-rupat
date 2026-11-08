@@ -3,6 +3,8 @@ import { ViewerLayout } from "./components/ViewerLayout";
 import { AdminLayout } from "./components/AdminLayout";
 import { Viewer } from "./pages/Viewer";
 import { Admin } from "./pages/Admin";
+import { AdminRekap } from "./pages/AdminRekap";
+import { AdminPengaturan } from "./pages/AdminPengaturan";
 
 export default function App() {
   return (
@@ -12,6 +14,8 @@ export default function App() {
       </Route>
       <Route element={<AdminLayout />}>
         <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/rekap" element={<AdminRekap />} />
+        <Route path="/admin/pengaturan" element={<AdminPengaturan />} />
       </Route>
       <Route path="/ruang/*" element={<Navigate to="/" replace />} />
     </Routes>

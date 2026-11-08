@@ -95,7 +95,7 @@ Admin hanya mengisi **jadwal**. Ganti password lewat **Ganti password** di dashb
 
 ## Android TV
 
-[android-tv/README.md](android-tv/README.md) — browser **http://10.5.1.50:3001/** atau APK.
+[android-tv/README.md](android-tv/README.md) — browser **http://10.5.1.50:3001/** atau APK ([cara unduh APK tanpa Android Studio](android-tv/APK-DOWNLOAD.md)).
 
 ## Struktur
 
