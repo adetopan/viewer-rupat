@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: rupat
-      POSTGRES_PASSWORD: rupat_secret
+      POSTGRES_PASSWORD: Jagakarsa28
       POSTGRES_DB: rupat
     ports:
       - "5432:5432"

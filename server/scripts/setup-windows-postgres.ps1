@@ -1,28 +1,61 @@
-# Jalankan sebagai user yang bisa akses PostgreSQL (biasanya tanpa password untuk postgres di localhost).
-# Contoh: powershell -File setup-windows-postgres.ps1
+# Setup database PostgreSQL untuk aplikasi ruang rapat (Windows, tanpa Docker).
+#
+# Jika psql meminta "Password for user postgres", set dulu password superuser:
+#   $env:PGPASSWORD = "Jagakarsa28"
+# lalu jalankan lagi: npm run db:local-init
 
-$psql = "C:\Program Files\PostgreSQL\18\bin\psql.exe"
-if (-not (Test-Path $psql)) {
-    Write-Error "psql tidak ditemukan. Sesuaikan path versi PostgreSQL Anda."
+$ErrorActionPreference = "Stop"
+
+function Find-PsqlPath {
+    $versions = 18, 17, 16, 15, 14
+    foreach ($v in $versions) {
+        $path = "C:\Program Files\PostgreSQL\$v\bin\psql.exe"
+        if (Test-Path $path) { return $path }
+    }
+    $cmd = Get-Command psql -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    return $null
+}
+
+$psql = Find-PsqlPath
+if (-not $psql) {
+    Write-Error "psql tidak ditemukan. Pasang PostgreSQL atau tambahkan psql ke PATH."
     exit 1
 }
 
-& $psql -U postgres -h localhost -p 5432 -v ON_ERROR_STOP=1 @"
-DO `$`$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rupat') THEN
-    CREATE USER rupat WITH PASSWORD 'rupat_secret';
-  END IF;
-END `$`$;
-"@
+Write-Host "Menggunakan: $psql"
 
-$dbExists = & $psql -U postgres -h localhost -p 5432 -tAc "SELECT 1 FROM pg_database WHERE datname = 'rupat'"
-if (-not ($dbExists -match "1")) {
-    & $psql -U postgres -h localhost -p 5432 -v ON_ERROR_STOP=1 -c "CREATE DATABASE rupat OWNER rupat;"
+$pgArgs = @("-U", "postgres", "-h", "localhost", "-p", "5432")
+
+function Invoke-Psql {
+    param([string]$Query, [switch]$Quiet)
+    $args = $pgArgs + @("-v", "ON_ERROR_STOP=1")
+    if ($Quiet) { $args += "-tAc" } else { $args += "-c" }
+    $args += $Query
+    & $psql @args
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Perintah psql gagal. Jika diminta password postgres, jalankan: `$env:PGPASSWORD = '...'"
+        exit $LASTEXITCODE
+    }
 }
-& $psql -U postgres -h localhost -p 5432 -c "GRANT ALL PRIVILEGES ON DATABASE rupat TO rupat;"
 
-Write-Host "Database siap. Lanjutkan:"
-Write-Host "  cd D:\viewer rupat\server"
-Write-Host "  npx prisma db push"
-Write-Host "  npm run db:seed"
-Write-Host "  npm start"
+$roleExists = (Invoke-Psql -Query "SELECT 1 FROM pg_roles WHERE rolname = 'rupat'" -Quiet).Trim()
+if ($roleExists -ne "1") {
+    Write-Host "Membuat user rupat..."
+    Invoke-Psql -Query "CREATE USER rupat WITH PASSWORD 'Jagakarsa28';"
+} else {
+    Write-Host "User rupat sudah ada, memperbarui password..."
+}
+Invoke-Psql -Query "ALTER USER rupat WITH PASSWORD 'Jagakarsa28';"
+
+$dbExists = (Invoke-Psql -Query "SELECT 1 FROM pg_database WHERE datname = 'rupat'" -Quiet).Trim()
+if ($dbExists -ne "1") {
+    Write-Host "Membuat database rupat..."
+    Invoke-Psql -Query "CREATE DATABASE rupat OWNER rupat;"
+} else {
+    Write-Host "Database rupat sudah ada."
+}
+Invoke-Psql -Query "GRANT ALL PRIVILEGES ON DATABASE rupat TO rupat;"
+
+Write-Host ""
+Write-Host "PostgreSQL siap (user + database: rupat)."

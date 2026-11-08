@@ -37,7 +37,14 @@ npm run build
 
 Perintah `db:local-init` membuat user/database PostgreSQL, tabel, dan data awal 4 ruang.
 
-Jika error *User was denied access*, pastikan service **postgresql-x64-18** nyala di *services.msc*.
+Jika psql meminta **Password for user postgres**, set password superuser dulu (sesuaikan jika berbeda):
+
+```powershell
+$env:PGPASSWORD = "Jagakarsa28"
+npm run db:local-init
+```
+
+Jika error *User was denied access*, pastikan service PostgreSQL nyala di *services.msc*.
 
 ---
 
@@ -80,7 +87,7 @@ npm run dev
 File `server/.env`:
 
 ```env
-DATABASE_URL="postgresql://rupat:rupat_secret@localhost:5432/rupat?schema=public"
+DATABASE_URL="postgresql://rupat:Jagakarsa28@localhost:5432/rupat?schema=public"
 PORT=3001
 HOST=0.0.0.0
 PUBLIC_HOST=localhost
