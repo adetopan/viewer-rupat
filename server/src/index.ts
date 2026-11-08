@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { roomsRouter } from "./routes/rooms.js";
 import { adminRouter } from "./routes/admin.js";
+import { ensureFixedRooms } from "./lib/ensureFixedRooms.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -31,7 +32,12 @@ app.get("*", (req, res, next) => {
   });
 });
 
-app.listen(port, host, () => {
+app.listen(port, host, async () => {
+  try {
+    await ensureFixedRooms();
+  } catch (e) {
+    console.error("Gagal memastikan ruang tetap:", e);
+  }
   console.log(`Server berjalan di http://localhost:${port}`);
   console.log(`TV viewer: http://${publicHost}:${port}/`);
   console.log(`Admin:     http://${publicHost}:${port}/admin`);

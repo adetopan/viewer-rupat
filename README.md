@@ -85,10 +85,11 @@ JWT_SECRET=rupat-jwt-ganti-di-server
 
 Password user PostgreSQL **`rupat`** tidak cocok dengan `DATABASE_URL`. Jalankan ulang `scripts\setup-windows-postgres.ps1` (lihat [docs/SERVER-WINDOWS.md](docs/SERVER-WINDOWS.md)).
 
-### Database kosong
+### Ruang tetap (4)
 
-Normal setelah seed: tambah **ruang** lalu **jadwal** di `/admin`.  
-`npm run db:seed` **menghapus** semua ruang & jadwal — hanya untuk setup awal.
+Ruang Rapat 1 (Lt 3), Rapat 2 (Lt 3), Aula Boediharto (Lt 3), Rapat Lt2 (Lt 2) — dibuat otomatis saat `npm start` atau `npm run db:seed`.
+
+Admin hanya mengisi **jadwal**. Ganti password lewat **Ganti password** di dashboard.
 
 ---
 

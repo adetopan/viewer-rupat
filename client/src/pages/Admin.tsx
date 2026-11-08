@@ -1,9 +1,8 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
+  changeAdminPassword,
   createBooking,
-  createRoom,
   deleteBooking,
-  deleteRoom,
   fetchAdminBookings,
   fetchAdminRooms,
   loginAdmin,
@@ -28,7 +27,7 @@ export function Admin() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [filterRoom, setFilterRoom] = useState<string>("all");
-
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const loadRooms = useCallback(async () => {
     if (!getAdminToken()) return;
     try {
@@ -77,37 +76,37 @@ export function Admin() {
     setUsername("");
     setRooms([]);
     setBookings([]);
+    setShowPasswordForm(false);
   }
 
-  async function onRoomSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onPasswordSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage(null);
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const newPw = String(fd.get("newPassword"));
+    const newPw2 = String(fd.get("newPassword2"));
+    if (newPw !== newPw2) {
+      setMessage("Password baru tidak cocok");
+      return;
+    }
     try {
-      await createRoom({
-        name: String(fd.get("name")),
-        floor: String(fd.get("floor") || "") || undefined,
-        capacity: fd.get("capacity")
-          ? Number(fd.get("capacity"))
-          : undefined,
-        sortOrder: fd.get("sortOrder")
-          ? Number(fd.get("sortOrder"))
-          : undefined,
-      });
-      setMessage("Ruang berhasil ditambahkan");
-      e.currentTarget.reset();
-      await loadRooms();
+      await changeAdminPassword(String(fd.get("currentPassword")), newPw);
+      setMessage("Password berhasil diubah");
+      form.reset();
+      setShowPasswordForm(false);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Gagal menyimpan ruang");
+      setMessage(err instanceof Error ? err.message : "Gagal mengubah password");
     }
   }
 
   async function onBookingSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage(null);
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     if (rooms.length === 0) {
-      setMessage("Tambahkan ruang rapat terlebih dahulu");
+      setMessage("Ruang belum tersedia. Restart server atau jalankan npm run db:seed");
       return;
     }
     try {
@@ -121,7 +120,7 @@ export function Admin() {
         endAt: new Date(String(fd.get("endAt"))).toISOString(),
       });
       setMessage("Jadwal berhasil disimpan");
-      e.currentTarget.reset();
+      form.reset();
       await loadBookings();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Gagal menyimpan");
@@ -136,18 +135,6 @@ export function Admin() {
       await loadBookings();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Gagal menghapus");
-    }
-  }
-
-  async function removeRoom(id: string) {
-    if (!confirm("Hapus ruang ini? Jadwal terkait ikut terhapus.")) return;
-    try {
-      await deleteRoom(id);
-      setMessage("Ruang dihapus");
-      await loadRooms();
-      await loadBookings();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Gagal menghapus ruang");
     }
   }
 
@@ -171,10 +158,7 @@ export function Admin() {
       <div className="admin-login">
         <form className="admin-form admin-form--login" onSubmit={tryLogin}>
           <h2>Masuk Dashboard Admin</h2>
-          <p>
-            Kelola ruang rapat dan jadwal. Tampilan TV hanya membaca data dari
-            database.
-          </p>
+          <p>Kelola jadwal ruang rapat. Ruang tetap ditampilkan di TV.</p>
           <label>
             Username
             <input
@@ -209,10 +193,59 @@ export function Admin() {
         <span>
           Login sebagai <strong>{adminName}</strong>
         </span>
-        <button type="button" className="btn-ghost" onClick={logout}>
-          Keluar
-        </button>
+        <div className="admin-topbar__actions">
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setShowPasswordForm((v) => !v)}
+          >
+            Ganti password
+          </button>
+          <button type="button" className="btn-ghost" onClick={logout}>
+            Keluar
+          </button>
+        </div>
       </div>
+
+      {showPasswordForm && (
+        <section className="admin-card admin-card--password">
+          <h2>Ganti password admin</h2>
+          <form className="admin-form admin-form--inline" onSubmit={onPasswordSubmit}>
+            <label>
+              Password lama
+              <input
+                type="password"
+                name="currentPassword"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <label>
+              Password baru
+              <input
+                type="password"
+                name="newPassword"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+            </label>
+            <label>
+              Ulangi password baru
+              <input
+                type="password"
+                name="newPassword2"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+            </label>
+            <button type="submit" className="btn-primary">
+              Simpan password
+            </button>
+          </form>
+        </section>
+      )}
 
       {message && (
         <div
@@ -227,68 +260,28 @@ export function Admin() {
         </div>
       )}
 
-      <div className="admin-columns admin-columns--triple">
-        <section className="admin-card">
-          <h2>Tambah ruang rapat</h2>
-          <form className="admin-form" onSubmit={onRoomSubmit}>
-            <label>
-              Nama ruang
-              <input name="name" required placeholder="Ruang Rapat 1" />
-            </label>
-            <label>
-              Lantai
-              <input name="floor" placeholder="Lantai 1" />
-            </label>
-            <label>
-              Kapasitas
-              <input name="capacity" type="number" min={1} placeholder="12" />
-            </label>
-            <label>
-              Urutan tampil di TV
-              <input name="sortOrder" type="number" defaultValue={0} />
-            </label>
-            <button type="submit" className="btn-primary">
-              Simpan ruang
-            </button>
-          </form>
-          <h3>Daftar ruang</h3>
-          {rooms.length === 0 ? (
-            <p className="admin-empty">Belum ada ruang. Isi form di atas.</p>
-          ) : (
-            <ul className="admin-room-list">
-              {rooms.map((r) => (
-                <li key={r.id}>
-                  <div>
-                    <strong>{r.name}</strong>
-                    <span>
-                      {[r.floor, r.capacity ? `${r.capacity} org` : null]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-ghost btn-ghost--danger"
-                    onClick={() => removeRoom(r.id)}
-                  >
-                    Hapus
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+      <section className="admin-card admin-card--rooms-info">
+        <h2>Ruang rapat (tetap)</h2>
+        <ul className="admin-room-list admin-room-list--static">
+          {rooms.map((r) => (
+            <li key={r.id}>
+              <strong>{r.name}</strong>
+              <span>{r.floor ?? ""}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
+      <div className="admin-columns">
         <section className="admin-card">
           <h2>Tambah jadwal rapat</h2>
           <form className="admin-form" onSubmit={onBookingSubmit}>
             <label>
               Ruang
-              <select name="roomId" required disabled={rooms.length === 0}>
-                {rooms.length === 0 && <option value="">—</option>}
+              <select name="roomId" required>
                 {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.name}
+                    {r.name} ({r.floor})
                   </option>
                 ))}
               </select>

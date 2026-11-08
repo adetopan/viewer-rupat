@@ -14,9 +14,7 @@ export function Viewer() {
         <p className="viewer-loading">Memuat status ruang rapat…</p>
       )}
       {data && data.rooms.length === 0 && (
-        <p className="viewer-loading">
-          Belum ada ruang rapat. Admin dapat menambah ruang di halaman Admin.
-        </p>
+        <p className="viewer-loading">Memuat daftar ruang…</p>
       )}
       {data && data.rooms.length > 0 && (
         <div className="tv-grid">

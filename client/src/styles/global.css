@@ -299,9 +299,36 @@ textarea:focus-visible {
   color: var(--text-muted);
 }
 
+.admin-topbar__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-card--rooms-info {
+  margin-bottom: 1rem;
+}
+
+.admin-card--rooms-info h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.admin-room-list--static li {
+  justify-content: flex-start;
+  gap: 1rem;
+}
+
+.admin-card--password {
+  margin-bottom: 1rem;
+}
+
+.admin-form--inline {
+  max-width: 480px;
+}
+
 .admin-columns {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(280px, 340px) 1fr;
+  grid-template-columns: minmax(320px, 400px) 1fr;
   gap: 1.5rem;
   align-items: start;
 }

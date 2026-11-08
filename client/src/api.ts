@@ -67,28 +67,17 @@ export async function fetchAdminRooms(): Promise<RoomRecord[]> {
   return body;
 }
 
-export async function createRoom(data: {
-  name: string;
-  floor?: string;
-  capacity?: number;
-  sortOrder?: number;
-}): Promise<RoomRecord> {
-  const res = await fetch(`${base}/api/admin/rooms`, {
+export async function changeAdminPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const res = await fetch(`${base}/api/admin/change-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ currentPassword, newPassword }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? "Gagal menyimpan ruang");
-  return body;
-}
-
-export async function deleteRoom(id: string) {
-  const res = await fetch(`${base}/api/admin/rooms/${id}`, {
-    method: "DELETE",
-    headers: { ...authHeaders() },
-  });
-  if (!res.ok) throw new Error("Gagal menghapus ruang");
+  if (!res.ok) throw new Error(body.error ?? "Gagal mengubah password");
 }
 
 export async function createBooking(

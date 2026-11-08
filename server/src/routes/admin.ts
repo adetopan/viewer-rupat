@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import {
+  hashPassword,
   requireAdminAuth,
   signAdminToken,
   verifyPassword,
@@ -35,60 +36,41 @@ adminRouter.post("/login", async (req, res) => {
 
 adminRouter.use(requireAdminAuth);
 
-const roomSchema = z.object({
-  name: z.string().min(1),
-  slug: z.string().min(1).optional(),
-  floor: z.string().optional(),
-  capacity: z.coerce.number().int().positive().optional(),
-  sortOrder: z.coerce.number().int().optional(),
-});
-
-function slugify(name: string) {
-  return (
-    name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || `ruang-${Date.now()}`
-  );
-}
-
 adminRouter.get("/rooms", async (_req, res) => {
   const rooms = await prisma.room.findMany({ orderBy: { sortOrder: "asc" } });
   res.json(rooms);
 });
 
-adminRouter.post("/rooms", async (req, res) => {
-  const parsed = roomSchema.safeParse(req.body);
+adminRouter.post("/change-password", async (req, res) => {
+  const parsed = z
+    .object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(6, "Password baru minimal 6 karakter"),
+    })
+    .safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
+    res.status(400).json({ error: "Data tidak valid" });
     return;
   }
-  const { name, floor, capacity, sortOrder } = parsed.data;
-  let slug = parsed.data.slug?.trim() || slugify(name);
-  const existing = await prisma.room.findUnique({ where: { slug } });
-  if (existing) slug = `${slug}-${Date.now()}`;
 
-  const room = await prisma.room.create({
-    data: {
-      name,
-      slug,
-      floor: floor ?? null,
-      capacity: capacity ?? null,
-      sortOrder: sortOrder ?? 0,
-    },
-  });
-  res.status(201).json(room);
-});
-
-adminRouter.delete("/rooms/:id", async (req, res) => {
-  try {
-    await prisma.room.delete({ where: { id: req.params.id } });
-    res.status(204).send();
-  } catch {
-    res.status(404).json({ error: "Ruang tidak ditemukan" });
+  const username = req.admin?.username;
+  if (!username) {
+    res.status(401).json({ error: "Sesi tidak valid" });
+    return;
   }
+
+  const user = await prisma.adminUser.findUnique({ where: { username } });
+  if (!user || !(await verifyPassword(parsed.data.currentPassword, user.passwordHash))) {
+    res.status(401).json({ error: "Password lama salah" });
+    return;
+  }
+
+  await prisma.adminUser.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(parsed.data.newPassword) },
+  });
+
+  res.json({ ok: true, message: "Password berhasil diubah" });
 });
 
 const bookingSchema = z.object({

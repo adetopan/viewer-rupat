@@ -1,12 +1,12 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/auth.js";
+import { ensureFixedRooms } from "../src/lib/ensureFixedRooms.js";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.booking.deleteMany();
-  await prisma.room.deleteMany();
+  await ensureFixedRooms();
 
   const username = process.env.ADMIN_USERNAME ?? "admin";
   const password = process.env.ADMIN_PASSWORD ?? "Jagakarsa28";
@@ -18,9 +18,7 @@ async function main() {
     create: { username, passwordHash },
   });
 
-  console.log(
-    `Seed selesai: Room & Booking kosong. Admin: username="${username}"`
-  );
+  console.log(`Seed selesai: 4 ruang tetap + admin "${username}".`);
 }
 
 main()
