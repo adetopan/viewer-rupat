@@ -1,3 +1,5 @@
+import { authHeaders } from "./lib/authSession";
+
 export type RoomStatus = "kosong" | "berlangsung" | "akan_datang";
 
 export interface Booking {
@@ -22,6 +24,15 @@ export interface RoomSummary {
   nextBooking: Booking | null;
 }
 
+export interface RoomRecord {
+  id: string;
+  slug: string;
+  name: string;
+  floor: string | null;
+  capacity: number | null;
+  sortOrder: number;
+}
+
 const base = "";
 
 export async function fetchRooms(): Promise<{
@@ -33,25 +44,61 @@ export async function fetchRooms(): Promise<{
   return res.json();
 }
 
-export async function fetchRoom(slug: string) {
-  const res = await fetch(`${base}/api/rooms/${slug}`);
-  if (!res.ok) throw new Error("Ruang tidak ditemukan");
-  return res.json() as Promise<{
-    serverTime: string;
-    room: RoomSummary;
-    scheduleToday: Booking[];
-  }>;
+export async function loginAdmin(
+  username: string,
+  password: string
+): Promise<{ token: string; username: string }> {
+  const res = await fetch(`${base}/api/admin/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Login gagal");
+  return body;
+}
+
+export async function fetchAdminRooms(): Promise<RoomRecord[]> {
+  const res = await fetch(`${base}/api/admin/rooms`, {
+    headers: { ...authHeaders() },
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Gagal memuat ruang");
+  return body;
+}
+
+export async function createRoom(data: {
+  name: string;
+  floor?: string;
+  capacity?: number;
+  sortOrder?: number;
+}): Promise<RoomRecord> {
+  const res = await fetch(`${base}/api/admin/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Gagal menyimpan ruang");
+  return body;
+}
+
+export async function deleteRoom(id: string) {
+  const res = await fetch(`${base}/api/admin/rooms/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error("Gagal menghapus ruang");
 }
 
 export async function createBooking(
-  data: Omit<Booking, "id">,
-  pin: string
+  data: Omit<Booking, "id">
 ): Promise<Booking> {
-  const res = await fetch(`${base}/api/rooms/bookings`, {
+  const res = await fetch(`${base}/api/admin/bookings`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-admin-pin": pin,
+      ...authHeaders(),
     },
     body: JSON.stringify(data),
   });
@@ -60,10 +107,10 @@ export async function createBooking(
   return body;
 }
 
-export async function deleteBooking(id: string, pin: string) {
-  const res = await fetch(`${base}/api/rooms/bookings/${id}`, {
+export async function deleteBooking(id: string) {
+  const res = await fetch(`${base}/api/admin/bookings/${id}`, {
     method: "DELETE",
-    headers: { "x-admin-pin": pin },
+    headers: { ...authHeaders() },
   });
   if (!res.ok) throw new Error("Gagal menghapus");
 }
@@ -73,7 +120,6 @@ export interface AdminBooking extends Booking {
 }
 
 export async function fetchAdminBookings(
-  pin: string,
   daysAhead = 14
 ): Promise<AdminBooking[]> {
   const from = new Date();
@@ -85,7 +131,7 @@ export async function fetchAdminBookings(
     to: to.toISOString(),
   });
   const res = await fetch(`${base}/api/admin/bookings?${q}`, {
-    headers: { "x-admin-pin": pin },
+    headers: { ...authHeaders() },
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.error ?? "Gagal memuat jadwal");

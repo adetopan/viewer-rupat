@@ -1,92 +1,153 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createBooking,
+  createRoom,
   deleteBooking,
+  deleteRoom,
   fetchAdminBookings,
-  fetchRooms,
+  fetchAdminRooms,
+  loginAdmin,
   type AdminBooking,
-  type RoomSummary,
+  type RoomRecord,
 } from "../api";
-import { usePoll } from "../hooks/usePoll";
+import {
+  clearAdminSession,
+  getAdminToken,
+  getAdminUsername,
+  setAdminSession,
+} from "../lib/authSession";
 import { formatDateLong, formatTime } from "../lib/format";
 
 export function Admin() {
-  const [pin, setPin] = useState("");
-  const [unlocked, setUnlocked] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [unlocked, setUnlocked] = useState(() => !!getAdminToken());
+  const [adminName, setAdminName] = useState(() => getAdminUsername() ?? "");
   const [message, setMessage] = useState<string | null>(null);
+  const [rooms, setRooms] = useState<RoomRecord[]>([]);
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [filterRoom, setFilterRoom] = useState<string>("all");
 
-  const loadRooms = useCallback(() => fetchRooms(), []);
-  const { data, refresh: refreshRooms } = usePoll(loadRooms, 60000);
-  const rooms: RoomSummary[] = data?.rooms ?? [];
+  const loadRooms = useCallback(async () => {
+    if (!getAdminToken()) return;
+    try {
+      setRooms(await fetchAdminRooms());
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Gagal memuat ruang");
+    }
+  }, []);
 
   const loadBookings = useCallback(async () => {
-    if (!unlocked || !pin) return;
+    if (!getAdminToken()) return;
     setLoadingBookings(true);
     try {
-      const list = await fetchAdminBookings(pin);
-      setBookings(list);
+      setBookings(await fetchAdminBookings());
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Gagal memuat jadwal");
     } finally {
       setLoadingBookings(false);
     }
-  }, [unlocked, pin]);
+  }, []);
 
   useEffect(() => {
-    if (unlocked) loadBookings();
-  }, [unlocked, loadBookings]);
+    if (unlocked) {
+      loadRooms();
+      loadBookings();
+    }
+  }, [unlocked, loadRooms, loadBookings]);
 
-  function tryUnlock(e: FormEvent) {
+  async function tryLogin(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
-    if (pin.length < 4) {
-      setMessage("Masukkan PIN minimal 4 digit");
-      return;
+    try {
+      const result = await loginAdmin(username, password);
+      setAdminSession(result.token, result.username);
+      setAdminName(result.username);
+      setUnlocked(true);
+      setPassword("");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Login gagal");
     }
-    fetchAdminBookings(pin)
-      .then(() => setUnlocked(true))
-      .catch(() => setMessage("PIN salah atau server tidak terjangkau"));
   }
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+  function logout() {
+    clearAdminSession();
+    setUnlocked(false);
+    setUsername("");
+    setRooms([]);
+    setBookings([]);
+  }
+
+  async function onRoomSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMessage(null);
     const fd = new FormData(e.currentTarget);
-    const roomId = String(fd.get("roomId"));
     try {
-      await createBooking(
-        {
-          roomId,
-          title: String(fd.get("title")),
-          organizer: String(fd.get("organizer") || "") || null,
-          department: String(fd.get("department") || "") || null,
-          description: null,
-          startAt: new Date(String(fd.get("startAt"))).toISOString(),
-          endAt: new Date(String(fd.get("endAt"))).toISOString(),
-        },
-        pin
-      );
+      await createRoom({
+        name: String(fd.get("name")),
+        floor: String(fd.get("floor") || "") || undefined,
+        capacity: fd.get("capacity")
+          ? Number(fd.get("capacity"))
+          : undefined,
+        sortOrder: fd.get("sortOrder")
+          ? Number(fd.get("sortOrder"))
+          : undefined,
+      });
+      setMessage("Ruang berhasil ditambahkan");
+      e.currentTarget.reset();
+      await loadRooms();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Gagal menyimpan ruang");
+    }
+  }
+
+  async function onBookingSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setMessage(null);
+    const fd = new FormData(e.currentTarget);
+    if (rooms.length === 0) {
+      setMessage("Tambahkan ruang rapat terlebih dahulu");
+      return;
+    }
+    try {
+      await createBooking({
+        roomId: String(fd.get("roomId")),
+        title: String(fd.get("title")),
+        organizer: String(fd.get("organizer") || "") || null,
+        department: String(fd.get("department") || "") || null,
+        description: null,
+        startAt: new Date(String(fd.get("startAt"))).toISOString(),
+        endAt: new Date(String(fd.get("endAt"))).toISOString(),
+      });
       setMessage("Jadwal berhasil disimpan");
       e.currentTarget.reset();
-      refreshRooms();
       await loadBookings();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Gagal menyimpan");
     }
   }
 
-  async function remove(id: string) {
+  async function removeBooking(id: string) {
     if (!confirm("Hapus jadwal ini?")) return;
     try {
-      await deleteBooking(id, pin);
+      await deleteBooking(id);
       setMessage("Jadwal dihapus");
-      refreshRooms();
       await loadBookings();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Gagal menghapus");
+    }
+  }
+
+  async function removeRoom(id: string) {
+    if (!confirm("Hapus ruang ini? Jadwal terkait ikut terhapus.")) return;
+    try {
+      await deleteRoom(id);
+      setMessage("Ruang dihapus");
+      await loadRooms();
+      await loadBookings();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Gagal menghapus ruang");
     }
   }
 
@@ -108,20 +169,29 @@ export function Admin() {
   if (!unlocked) {
     return (
       <div className="admin-login">
-        <form className="admin-form admin-form--login" onSubmit={tryUnlock}>
+        <form className="admin-form admin-form--login" onSubmit={tryLogin}>
           <h2>Masuk Dashboard Admin</h2>
           <p>
-            Digunakan di komputer admin untuk mengisi jadwal. Tampilan TV hanya
-            membaca data (tanpa input).
+            Kelola ruang rapat dan jadwal. Tampilan TV hanya membaca data dari
+            database.
           </p>
           <label>
-            PIN Admin
+            Username
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              required
+            />
+          </label>
+          <label>
+            Password
             <input
               type="password"
-              inputMode="numeric"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              autoComplete="off"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
             />
           </label>
           {message && <div className="error-banner">{message}</div>}
@@ -135,22 +205,87 @@ export function Admin() {
 
   return (
     <div className="admin-dashboard">
+      <div className="admin-topbar">
+        <span>
+          Login sebagai <strong>{adminName}</strong>
+        </span>
+        <button type="button" className="btn-ghost" onClick={logout}>
+          Keluar
+        </button>
+      </div>
+
       {message && (
         <div
           className="toast-banner"
-          data-type={message.includes("berhasil") || message.includes("dihapus") ? "ok" : "err"}
+          data-type={
+            message.includes("berhasil") || message.includes("dihapus")
+              ? "ok"
+              : "err"
+          }
         >
           {message}
         </div>
       )}
 
-      <div className="admin-columns">
+      <div className="admin-columns admin-columns--triple">
+        <section className="admin-card">
+          <h2>Tambah ruang rapat</h2>
+          <form className="admin-form" onSubmit={onRoomSubmit}>
+            <label>
+              Nama ruang
+              <input name="name" required placeholder="Ruang Rapat 1" />
+            </label>
+            <label>
+              Lantai
+              <input name="floor" placeholder="Lantai 1" />
+            </label>
+            <label>
+              Kapasitas
+              <input name="capacity" type="number" min={1} placeholder="12" />
+            </label>
+            <label>
+              Urutan tampil di TV
+              <input name="sortOrder" type="number" defaultValue={0} />
+            </label>
+            <button type="submit" className="btn-primary">
+              Simpan ruang
+            </button>
+          </form>
+          <h3>Daftar ruang</h3>
+          {rooms.length === 0 ? (
+            <p className="admin-empty">Belum ada ruang. Isi form di atas.</p>
+          ) : (
+            <ul className="admin-room-list">
+              {rooms.map((r) => (
+                <li key={r.id}>
+                  <div>
+                    <strong>{r.name}</strong>
+                    <span>
+                      {[r.floor, r.capacity ? `${r.capacity} org` : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-ghost--danger"
+                    onClick={() => removeRoom(r.id)}
+                  >
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         <section className="admin-card">
           <h2>Tambah jadwal rapat</h2>
-          <form className="admin-form" onSubmit={onSubmit}>
+          <form className="admin-form" onSubmit={onBookingSubmit}>
             <label>
               Ruang
-              <select name="roomId" required>
+              <select name="roomId" required disabled={rooms.length === 0}>
+                {rooms.length === 0 && <option value="">—</option>}
                 {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
@@ -160,15 +295,15 @@ export function Admin() {
             </label>
             <label>
               Judul rapat / kegiatan
-              <input name="title" required placeholder="Contoh: Rapat Koordinasi PPI" />
+              <input name="title" required />
             </label>
             <label>
-              Penyelenggara / pimpinan
-              <input name="organizer" placeholder="Nama / jabatan" />
+              Penyelenggara
+              <input name="organizer" />
             </label>
             <label>
               Unit / instalasi
-              <input name="department" placeholder="Contoh: Keperawatan" />
+              <input name="department" />
             </label>
             <div className="admin-form__row">
               <label>
@@ -191,7 +326,7 @@ export function Admin() {
               </label>
             </div>
             <button type="submit" className="btn-primary">
-              Simpan ke database
+              Simpan jadwal
             </button>
           </form>
         </section>
@@ -217,7 +352,7 @@ export function Admin() {
           {loadingBookings ? (
             <p>Memuat jadwal…</p>
           ) : filtered.length === 0 ? (
-            <p className="admin-empty">Belum ada jadwal dalam 14 hari ke depan.</p>
+            <p className="admin-empty">Belum ada jadwal.</p>
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -240,17 +375,12 @@ export function Admin() {
                       <td>{b.room.name}</td>
                       <td>
                         <strong>{b.title}</strong>
-                        {(b.organizer || b.department) && (
-                          <span className="admin-table-sub">
-                            {[b.organizer, b.department].filter(Boolean).join(" · ")}
-                          </span>
-                        )}
                       </td>
                       <td>
                         <button
                           type="button"
                           className="btn-ghost btn-ghost--danger"
-                          onClick={() => remove(b.id)}
+                          onClick={() => removeBooking(b.id)}
                         >
                           Hapus
                         </button>

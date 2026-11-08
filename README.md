@@ -11,7 +11,7 @@ Aplikasi **lokal**: PostgreSQL di Windows (tanpa Docker), Node.js + React. Satu 
 
 Nanti jika dipasang di jaringan RS (IP **10.5.1.10**), ganti `PUBLIC_HOST` di `server/.env` dan buka http://10.5.1.10:3001/ dari TV.
 
-PIN admin default: **1234** (`server/.env`).
+Login admin default: username **`admin`**, password dari `ADMIN_PASSWORD` di `server/.env` (default **Jagakarsa28**).
 
 ---
 
@@ -45,6 +45,20 @@ npm run db:local-init
 ```
 
 Jika error *User was denied access*, pastikan service PostgreSQL nyala di *services.msc*.
+
+### Tabel ada tapi kosong (0 baris)
+
+Biasanya `db:seed` belum jalan (init berhenti di error psql). Isi ulang:
+
+```powershell
+cd server
+copy .env.example .env
+npm run db:sync
+```
+
+Harus muncul: `Seed selesai: Room & Booking kosong...`  
+Lalu di **/admin** tambahkan ruang dan jadwal.  
+**Peringatan:** `npm run db:seed` menghapus semua ruang & jadwal (hanya mempertahankan akun admin).
 
 ---
 

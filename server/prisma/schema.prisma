@@ -34,3 +34,11 @@ model Booking {
 
   @@index([roomId, startAt, endAt])
 }
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

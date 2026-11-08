@@ -13,7 +13,12 @@ export function Viewer() {
       {loading && !data && (
         <p className="viewer-loading">Memuat status ruang rapat…</p>
       )}
-      {data && (
+      {data && data.rooms.length === 0 && (
+        <p className="viewer-loading">
+          Belum ada ruang rapat. Admin dapat menambah ruang di halaman Admin.
+        </p>
+      )}
+      {data && data.rooms.length > 0 && (
         <div className="tv-grid">
           {data.rooms.map((room) => (
             <TvRoomPanel key={room.id} room={room} />
