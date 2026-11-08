@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = Number(process.env.PORT) || 3001;
 const host = process.env.HOST ?? "0.0.0.0";
-const publicHost = process.env.PUBLIC_HOST ?? "10.5.1.10";
+const publicHost = process.env.PUBLIC_HOST ?? "10.5.1.50";
 
 app.use(cors());
 app.use(express.json());

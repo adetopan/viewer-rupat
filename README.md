@@ -9,7 +9,7 @@ Aplikasi **lokal**: PostgreSQL di Windows (tanpa Docker), Node.js + React. Satu 
 | **Viewer (TV / browser)** | http://localhost:3001/ |
 | **Admin** | http://localhost:3001/admin |
 
-Nanti jika dipasang di jaringan RS (IP **10.5.1.10**), ganti `PUBLIC_HOST` di `server/.env` dan buka http://10.5.1.10:3001/ dari TV.
+Nanti jika dipasang di jaringan RS (IP **10.5.1.50**), ganti `PUBLIC_HOST` di `server/.env` dan buka http://10.5.1.50:3001/ dari TV.
 
 Login admin default: username **`admin`**, password dari `ADMIN_PASSWORD` di `server/.env` (default **Jagakarsa28**).
 
@@ -45,6 +45,37 @@ npm run db:local-init
 ```
 
 Jika error *User was denied access*, pastikan service PostgreSQL nyala di *services.msc*.
+
+### Error P1000 — Authentication failed (user `rupat`)
+
+Password di `server\.env` tidak sama dengan password user PostgreSQL **`rupat`**.
+
+1. Pastikan file ada: `copy .env.example .env` di folder `server`.
+2. Sesuaikan password superuser **postgres** (bukan user `rupat`), lalu jalankan:
+
+```powershell
+cd server
+$env:PGPASSWORD = "PASSWORD_POSTGRES_ANDA"
+powershell -ExecutionPolicy Bypass -File scripts\setup-windows-postgres.ps1
+```
+
+Skrip ini meng-set user **`rupat`** dengan password **`Jagakarsa28`** (sama seperti di `.env.example`).
+
+3. Uji login user aplikasi:
+
+```powershell
+$env:PGPASSWORD = "Jagakarsa28"
+psql -U rupat -h localhost -d rupat -c "SELECT 1"
+```
+
+4. Jika berhasil:
+
+```powershell
+npx prisma db push
+npm run db:seed
+```
+
+Jika password user `rupat` ingin lain, ubah di **dua tempat**: `ALTER USER rupat ...` di PostgreSQL **dan** `DATABASE_URL` di `.env` (bagian setelah `rupat:`).
 
 ### Tabel ada tapi kosong (0 baris)
 
@@ -114,7 +145,7 @@ Sesuaikan kata sandi di `DATABASE_URL` jika Anda mengubah password user `rupat` 
 
 ## Android TV (nanti)
 
-Browser TV atau APK — lihat [android-tv/README.md](android-tv/README.md). Untuk uji di rumah, APK bisa mengarah ke IP PC Anda di LAN; untuk produksi RS gunakan **10.5.1.10**.
+Browser TV atau APK — lihat [android-tv/README.md](android-tv/README.md). Untuk uji di rumah, APK bisa mengarah ke IP PC Anda di LAN; untuk produksi RS gunakan **10.5.1.50**.
 
 ---
 

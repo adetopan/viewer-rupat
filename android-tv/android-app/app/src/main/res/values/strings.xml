@@ -2,5 +2,5 @@
 <resources>
     <string name="app_name">Ruang Rapat Pusdokkes</string>
     <!-- Ganti ke IP server di jaringan RS -->
-    <string name="server_url">http://10.5.1.10:3001/</string>
+    <string name="server_url">http://10.5.1.50:3001/</string>
 </resources>
