@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rupat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rupat
+      POSTGRES_PASSWORD: rupat_secret
+      POSTGRES_DB: rupat
+    ports:
+      - "5432:5432"
+    volumes:
+      - rupat_pg_data:/var/lib/postgresql/data
+
+volumes:
+  rupat_pg_data:

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts","./src/components/adminlayout.tsx","./src/components/tvroompanel.tsx","./src/components/viewerlayout.tsx","./src/hooks/useclock.ts","./src/hooks/usepoll.ts","./src/lib/format.ts","./src/pages/admin.tsx","./src/pages/viewer.tsx"],"version":"5.9.3"}
