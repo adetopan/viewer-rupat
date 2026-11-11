@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#009B4D</color>
+    <string name="app_name">Ruang Rapat Pusdokkes</string>
+    <string name="server_url">http://10.5.1.50:3001/</string>
+    <style name="Theme.RupatRuangRapat" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">#0A0F0C</item>
+    </style>
+</resources>

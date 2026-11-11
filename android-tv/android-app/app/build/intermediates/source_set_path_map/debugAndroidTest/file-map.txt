@@ -1,0 +1,4 @@
+id.polri.pusdokkes.ruangrapat.test.app-androidTest-0 D:\viewer rupat\android-tv\android-app\app\build\generated\res\resValues\androidTest\debug
+id.polri.pusdokkes.ruangrapat.test.app-mergeDebugAndroidTestResources-1 D:\viewer rupat\android-tv\android-app\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+id.polri.pusdokkes.ruangrapat.test.app-mergeDebugAndroidTestResources-2 D:\viewer rupat\android-tv\android-app\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+id.polri.pusdokkes.ruangrapat.test.app-merged_res-3 D:\viewer rupat\android-tv\android-app\app\build\intermediates\merged_res\debugAndroidTest

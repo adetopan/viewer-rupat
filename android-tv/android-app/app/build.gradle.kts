@@ -30,7 +30,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.leanback:leanback:1.0.0")
-    implementation("androidx.webkit:webkit:1.11.0")
+    implementation("androidx.webkit:webkit:1.12.1")
 }

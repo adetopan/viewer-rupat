@@ -20,7 +20,7 @@ export function Viewer() {
         <p className="viewer-loading">Memuat daftar ruang…</p>
       )}
       {data && data.rooms.length > 0 && (
-        <div className="tv-grid">
+        <div className="tv-list">
           {data.rooms.map((room) => (
             <TvRoomPanel key={room.id} room={room} />
           ))}

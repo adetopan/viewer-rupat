@@ -1,11 +1,14 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createBooking,
+  createRoom,
   deleteBooking,
+  deleteRoom,
   fetchAdminBookings,
   fetchAdminRooms,
   loginAdmin,
   updateBooking,
+  updateRoom,
   type AdminBooking,
   type RoomRecord,
 } from "../api";
@@ -74,6 +77,29 @@ function draftFromBooking(b: AdminBooking): BookingDraft {
   };
 }
 
+type RoomDraft = {
+  name: string;
+  floor: string;
+  capacity: string;
+  sortOrder: string;
+};
+
+const emptyRoomDraft = (): RoomDraft => ({
+  name: "",
+  floor: "",
+  capacity: "",
+  sortOrder: "0",
+});
+
+function roomDraftFromRecord(r: RoomRecord): RoomDraft {
+  return {
+    name: r.name,
+    floor: r.floor ?? "",
+    capacity: r.capacity != null ? String(r.capacity) : "",
+    sortOrder: String(r.sortOrder),
+  };
+}
+
 export function Admin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -87,6 +113,8 @@ export function Admin() {
   const [filterRoom, setFilterRoom] = useState<string>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<BookingDraft>(() => defaultDraft([]));
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+  const [roomDraft, setRoomDraft] = useState<RoomDraft>(emptyRoomDraft);
 
   const loadRooms = useCallback(async () => {
     if (!getAdminToken()) return;
@@ -190,6 +218,68 @@ export function Admin() {
     }
   }
 
+  function cancelRoomEdit() {
+    setEditingRoomId(null);
+    setRoomDraft(emptyRoomDraft());
+  }
+
+  function startRoomEdit(r: RoomRecord) {
+    setEditingRoomId(r.id);
+    setRoomDraft(roomDraftFromRecord(r));
+    document.getElementById("room-form")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  async function onRoomSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setMessage(null);
+    const name = roomDraft.name.trim();
+    if (!name) {
+      setMessageKind("err");
+      setMessage("Nama ruang wajib diisi");
+      return;
+    }
+    const payload = {
+      name,
+      floor: roomDraft.floor.trim() || null,
+      capacity: roomDraft.capacity
+        ? Number(roomDraft.capacity)
+        : null,
+      sortOrder: Number(roomDraft.sortOrder) || 0,
+    };
+    try {
+      if (editingRoomId) {
+        await updateRoom(editingRoomId, payload);
+        setMessageKind("ok");
+        setMessage("Ruang berhasil diperbarui");
+        setEditingRoomId(null);
+      } else {
+        await createRoom(payload);
+        setMessageKind("ok");
+        setMessage("Ruang berhasil ditambahkan");
+      }
+      setRoomDraft(emptyRoomDraft());
+      await loadRooms();
+    } catch (err) {
+      setMessageKind("err");
+      setMessage(err instanceof Error ? err.message : "Gagal menyimpan ruang");
+    }
+  }
+
+  async function removeRoom(id: string) {
+    if (!confirm("Hapus ruang ini? Semua jadwal di ruang ini ikut terhapus.")) return;
+    try {
+      await deleteRoom(id);
+      setMessageKind("ok");
+      setMessage("Ruang dihapus");
+      if (editingRoomId === id) cancelRoomEdit();
+      await loadRooms();
+      await loadBookings();
+    } catch (err) {
+      setMessageKind("err");
+      setMessage(err instanceof Error ? err.message : "Gagal menghapus ruang");
+    }
+  }
+
   async function removeBooking(id: string) {
     if (!confirm("Hapus jadwal ini?")) return;
     try {
@@ -279,19 +369,103 @@ export function Admin() {
         </div>
       )}
 
-      <section className="admin-card admin-card--rooms-info">
-        <div className="admin-card__head">
-          <h2>Ruang rapat</h2>
-          <span className="admin-pill">4 ruang tetap · otomatis di TV</span>
-        </div>
-        <div className="admin-room-grid">
-          {rooms.map((r) => (
-            <article key={r.id} className="admin-room-tile">
-              <h3>{r.name}</h3>
-              <p>{r.floor ?? "—"}</p>
-            </article>
-          ))}
-        </div>
+      <section className="admin-card admin-card--rooms-info" id="room-form">
+        <CardHead
+          title={editingRoomId ? "Ubah ruang rapat" : "Tambah ruang rapat"}
+          subtitle="Urutan tampil di TV mengikuti kolom urutan (kecil = atas)"
+        />
+        <form className="admin-form admin-form--room" onSubmit={onRoomSubmit}>
+          <div className="admin-form__row admin-form__row--quad">
+            <label>
+              Nama ruang
+              <input
+                required
+                value={roomDraft.name}
+                onChange={(e) =>
+                  setRoomDraft((d) => ({ ...d, name: e.target.value }))
+                }
+                placeholder="Ruang Rapat 1"
+              />
+            </label>
+            <label>
+              Lantai
+              <input
+                value={roomDraft.floor}
+                onChange={(e) =>
+                  setRoomDraft((d) => ({ ...d, floor: e.target.value }))
+                }
+                placeholder="Lantai 3"
+              />
+            </label>
+            <label>
+              Kapasitas
+              <input
+                type="number"
+                min={1}
+                value={roomDraft.capacity}
+                onChange={(e) =>
+                  setRoomDraft((d) => ({ ...d, capacity: e.target.value }))
+                }
+                placeholder="20"
+              />
+            </label>
+            <label>
+              Urutan TV
+              <input
+                type="number"
+                value={roomDraft.sortOrder}
+                onChange={(e) =>
+                  setRoomDraft((d) => ({ ...d, sortOrder: e.target.value }))
+                }
+              />
+            </label>
+          </div>
+          <div className="admin-form__actions">
+            {editingRoomId ? (
+              <button type="button" className="btn-ghost" onClick={cancelRoomEdit}>
+                Batal ubah
+              </button>
+            ) : null}
+            <button type="submit" className="btn-primary">
+              {editingRoomId ? "Simpan perubahan ruang" : "Tambah ruang"}
+            </button>
+          </div>
+        </form>
+        <h3 className="admin-subhead">Daftar ruang di TV</h3>
+        {rooms.length === 0 ? (
+          <p className="admin-empty">Belum ada ruang. Tambahkan di form atas.</p>
+        ) : (
+          <ul className="admin-room-manage-list">
+            {rooms.map((r) => (
+              <li key={r.id}>
+                <div>
+                  <strong>{r.name}</strong>
+                  <span>
+                    {[r.floor, r.capacity ? `${r.capacity} org` : null, `Urutan ${r.sortOrder}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
+                <div className="admin-room-manage-list__actions">
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => startRoomEdit(r)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-ghost--danger"
+                    onClick={() => removeRoom(r.id)}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="admin-columns">

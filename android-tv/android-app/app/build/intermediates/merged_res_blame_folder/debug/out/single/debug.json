@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "id.polri.pusdokkes.ruangrapat.app-merged_res-28:/drawable_tv_banner.xml.flat",
+        "source": "id.polri.pusdokkes.ruangrapat.app-main-30:/drawable/tv_banner.xml"
+    },
+    {
+        "merged": "id.polri.pusdokkes.ruangrapat.app-merged_res-28:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "id.polri.pusdokkes.ruangrapat.app-main-30:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "id.polri.pusdokkes.ruangrapat.app-merged_res-28:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "id.polri.pusdokkes.ruangrapat.app-main-30:/mipmap-anydpi-v26/ic_launcher.xml"
+    }
+]

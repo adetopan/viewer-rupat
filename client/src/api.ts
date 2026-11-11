@@ -69,6 +69,51 @@ export async function fetchAdminRooms(): Promise<RoomRecord[]> {
   return body;
 }
 
+export async function createRoom(data: {
+  name: string;
+  floor?: string | null;
+  capacity?: number | null;
+  sortOrder?: number;
+  slug?: string;
+}): Promise<RoomRecord> {
+  const res = await fetch(`${base}/api/admin/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal menambah ruang"));
+  return body;
+}
+
+export async function updateRoom(
+  id: string,
+  data: {
+    name: string;
+    floor?: string | null;
+    capacity?: number | null;
+    sortOrder?: number;
+    slug?: string;
+  }
+): Promise<RoomRecord> {
+  const res = await fetch(`${base}/api/admin/rooms/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(data),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(messageFromApiError(body, "Gagal mengubah ruang"));
+  return body;
+}
+
+export async function deleteRoom(id: string) {
+  const res = await fetch(`${base}/api/admin/rooms/${id}`, {
+    method: "DELETE",
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error("Gagal menghapus ruang");
+}
+
 export async function changeAdminPassword(
   currentPassword: string,
   newPassword: string

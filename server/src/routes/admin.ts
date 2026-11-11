@@ -41,6 +41,92 @@ adminRouter.get("/rooms", async (_req, res) => {
   res.json(rooms);
 });
 
+const roomSchema = z.object({
+  name: z.string().min(1, "Nama ruang wajib"),
+  slug: z.string().min(1).optional(),
+  floor: z.string().nullish(),
+  capacity: z.coerce.number().int().positive().nullish(),
+  sortOrder: z.coerce.number().int().optional(),
+});
+
+function slugify(name: string) {
+  return (
+    name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || `ruang-${Date.now()}`
+  );
+}
+
+adminRouter.post("/rooms", async (req, res) => {
+  const parsed = roomSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: zodFirstError(parsed.error) });
+    return;
+  }
+  const { name, floor, capacity, sortOrder } = parsed.data;
+  let slug = parsed.data.slug?.trim() || slugify(name);
+  if (await prisma.room.findUnique({ where: { slug } })) {
+    slug = `${slug}-${Date.now()}`;
+  }
+  const room = await prisma.room.create({
+    data: {
+      name,
+      slug,
+      floor: floor ?? null,
+      capacity: capacity ?? null,
+      sortOrder: sortOrder ?? 0,
+    },
+  });
+  res.status(201).json(room);
+});
+
+adminRouter.patch("/rooms/:id", async (req, res) => {
+  const parsed = roomSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: zodFirstError(parsed.error) });
+    return;
+  }
+  const existing = await prisma.room.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    res.status(404).json({ error: "Ruang tidak ditemukan" });
+    return;
+  }
+  const { name, floor, capacity, sortOrder } = parsed.data;
+  let slug = parsed.data.slug?.trim() || existing.slug;
+  if (slug !== existing.slug) {
+    const clash = await prisma.room.findFirst({
+      where: { slug, id: { not: existing.id } },
+    });
+    if (clash) {
+      res.status(409).json({ error: "Slug sudah dipakai ruang lain" });
+      return;
+    }
+  }
+  const room = await prisma.room.update({
+    where: { id: req.params.id },
+    data: {
+      name,
+      slug,
+      floor: floor ?? null,
+      capacity: capacity ?? null,
+      ...(sortOrder !== undefined ? { sortOrder } : {}),
+    },
+  });
+  res.json(room);
+});
+
+adminRouter.delete("/rooms/:id", async (req, res) => {
+  try {
+    await prisma.room.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch {
+    res.status(404).json({ error: "Ruang tidak ditemukan" });
+  }
+});
+
 adminRouter.post("/change-password", async (req, res) => {
   const parsed = z
     .object({

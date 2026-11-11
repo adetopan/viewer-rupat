@@ -46,27 +46,29 @@ export function TvRoomPanel({ room }: { room: RoomSummary }) {
 
   return (
     <article
-      className={`tv-panel tv-panel--${room.status}`}
+      className={`tv-panel tv-panel--row tv-panel--${room.status}`}
       aria-label={`${room.name}, ${statusLabel(room.status)}`}
     >
       <div className="tv-panel__accent" aria-hidden="true" />
-      <header className="tv-panel__head">
+      <div className="tv-panel__col tv-panel__col--room">
         <h2 className="tv-panel__room">{room.name}</h2>
+        <p className="tv-panel__meta">
+          {room.floor ?? ""}
+          {room.capacity ? ` · ${room.capacity} orang` : ""}
+        </p>
+      </div>
+      <div className="tv-panel__col tv-panel__col--status">
         <span className={`badge badge--${room.status}`}>
           {statusLabel(room.status)}
         </span>
-      </header>
-      {activityLabel ? (
-        <p className="tv-panel__label">{activityLabel}</p>
-      ) : null}
-      <p className="tv-panel__title">{activityTitle}</p>
-      <p className="tv-panel__detail">{activityDetail}</p>
-      {room.floor && (
-        <p className="tv-panel__meta">
-          {room.floor}
-          {room.capacity ? ` · ${room.capacity} orang` : ""}
-        </p>
-      )}
+        {activityLabel ? (
+          <p className="tv-panel__label">{activityLabel}</p>
+        ) : null}
+      </div>
+      <div className="tv-panel__col tv-panel__col--body">
+        <p className="tv-panel__title">{activityTitle}</p>
+        <p className="tv-panel__detail">{activityDetail}</p>
+      </div>
     </article>
   );
 }

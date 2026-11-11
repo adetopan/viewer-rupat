@@ -1,0 +1,4 @@
+#Mon Nov 09 11:21:34 WIB 2026
+base.0=D\:\\viewer rupat\\android-tv\\android-app\\app\\build\\intermediates\\dex\\debugAndroidTest\\mergeProjectDexDebugAndroidTest\\0\\classes.dex
+path.0=0/classes.dex
+renamed.0=classes.dex
