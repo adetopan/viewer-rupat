@@ -1,24 +1,25 @@
 import type { AgendaItem } from "../api";
 import { formatTime } from "../lib/format";
 
-const weekdayShort: Record<number, string> = {
-  0: "Min",
-  1: "Sen",
-  2: "Sel",
-  3: "Rab",
-  4: "Kam",
-  5: "Jum",
-  6: "Sab",
+const weekdayFull: Record<number, string> = {
+  0: "Minggu",
+  1: "Senin",
+  2: "Selasa",
+  3: "Rabu",
+  4: "Kamis",
+  5: "Jumat",
+  6: "Sabtu",
 };
 
 const statusText: Record<AgendaItem["status"], string> = {
-  berlangsung: "Live",
+  berlangsung: "Sedang berlangsung",
   akan_datang: "Akan datang",
   selesai: "Selesai",
 };
 
 export function AgendaRow({ item, index }: { item: AgendaItem; index: number }) {
-  const day = weekdayShort[new Date(item.startAt).getDay()] ?? "";
+  const day = weekdayFull[new Date(item.startAt).getDay()] ?? "";
+  const unitLine = [item.organizer, item.department].filter(Boolean).join(" · ");
 
   return (
     <article
@@ -47,8 +48,13 @@ export function AgendaRow({ item, index }: { item: AgendaItem; index: number }) 
             {item.roomName}
             {item.roomFloor ? ` · ${item.roomFloor}` : ""}
           </span>
-          {item.organizer ? <span className="agenda-row__host">{item.organizer}</span> : null}
         </p>
+        {unitLine ? (
+          <p className="agenda-row__unit">
+            <span className="agenda-row__unit-label">Unit</span>
+            {unitLine}
+          </p>
+        ) : null}
       </div>
       <span className={`agenda-row__badge agenda-row__badge--${item.status}`}>
         {item.status === "berlangsung" ? <span className="pulse" /> : null}

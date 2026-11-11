@@ -17,7 +17,7 @@ export function formatDateLong(iso: string) {
 /** Tanggal ringkas untuk tabel admin (muat di kolom sempit). */
 export function formatDateTable(iso: string) {
   const d = new Date(iso);
-  const weekday = d.toLocaleDateString("id-ID", { weekday: "short" });
+  const weekday = d.toLocaleDateString("id-ID", { weekday: "long" });
   const rest = d.toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",

@@ -148,6 +148,12 @@ export function Admin() {
     }
   }, [unlocked, loadRooms, loadBookings]);
 
+  useEffect(() => {
+    if (!message || !unlocked) return;
+    const t = window.setTimeout(() => setMessage(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [message, unlocked]);
+
   function cancelEdit() {
     setEditingId(null);
     setDraft(defaultDraft(rooms));
@@ -364,7 +370,11 @@ export function Admin() {
       </div>
 
       {message && (
-        <div className="toast-banner" data-type={messageKind}>
+        <div
+          className="toast-banner toast-banner--float"
+          data-type={messageKind}
+          role="status"
+        >
           {message}
         </div>
       )}

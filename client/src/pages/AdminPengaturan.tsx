@@ -58,7 +58,11 @@ export function AdminPengaturan() {
       </div>
 
       {message && (
-        <div className="toast-banner" data-type={messageKind}>
+        <div
+          className="toast-banner toast-banner--float"
+          data-type={messageKind}
+          role="status"
+        >
           {message}
         </div>
       )}
