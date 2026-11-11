@@ -19,7 +19,6 @@ const statusText: Record<AgendaItem["status"], string> = {
 
 export function AgendaRow({ item, index }: { item: AgendaItem; index: number }) {
   const day = weekdayFull[new Date(item.startAt).getDay()] ?? "";
-  const unitLine = [item.organizer, item.department].filter(Boolean).join(" · ");
 
   return (
     <article
@@ -49,12 +48,22 @@ export function AgendaRow({ item, index }: { item: AgendaItem; index: number }) 
             {item.roomFloor ? ` · ${item.roomFloor}` : ""}
           </span>
         </p>
-        {unitLine ? (
-          <p className="agenda-row__unit">
-            <span className="agenda-row__unit-label">Unit</span>
-            {unitLine}
-          </p>
-        ) : null}
+        {(item.organizer || item.department) && (
+          <div className="agenda-row__meta">
+            {item.organizer ? (
+              <p className="agenda-row__meta-item">
+                <span className="agenda-row__meta-label">Penyelenggara</span>
+                {item.organizer}
+              </p>
+            ) : null}
+            {item.department ? (
+              <p className="agenda-row__meta-item">
+                <span className="agenda-row__meta-label">Unit</span>
+                {item.department}
+              </p>
+            ) : null}
+          </div>
+        )}
       </div>
       <span className={`agenda-row__badge agenda-row__badge--${item.status}`}>
         {item.status === "berlangsung" ? <span className="pulse" /> : null}

@@ -7,6 +7,12 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
+function statusLabel(now: Date, startAt: Date, endAt: Date) {
+  if (now >= startAt && now < endAt) return "Sedang berlangsung";
+  if (now < startAt) return "Akan datang";
+  return "Selesai";
+}
+
 /** Teks untuk running text TV (dari env + jadwal hari ini). */
 export function buildViewerTicker(
   now: Date,
@@ -28,17 +34,9 @@ export function buildViewerTicker(
   for (const b of today.slice(0, 10)) {
     const room = rooms.find((r) => r.id === b.roomId);
     const roomName = room?.name ?? "Ruang rapat";
+    const status = statusLabel(now, b.startAt, b.endAt);
     parts.push(
-      `${roomName}: ${b.title} (${formatTime(b.startAt)}–${formatTime(b.endAt)})`
-    );
-  }
-
-  const ongoing = today.filter(
-    (b) => b.startAt <= now && b.endAt > now
-  );
-  if (ongoing.length > 0) {
-    parts.push(
-      `Sedang berlangsung: ${ongoing.map((b) => b.title).join(", ")}`
+      `${roomName}: ${b.title} (${formatTime(b.startAt)}–${formatTime(b.endAt)}) · ${status}`
     );
   }
 

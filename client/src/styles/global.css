@@ -404,19 +404,25 @@ textarea:focus-visible {
   flex-shrink: 0;
 }
 
-.agenda-row__unit {
-  margin: 0.45rem 0 0;
+.agenda-row__meta {
+  margin: 0.55rem 0 0;
   display: flex;
   flex-wrap: wrap;
+  gap: 0.55rem 0.85rem;
+}
+
+.agenda-row__meta-item {
+  margin: 0;
+  display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: clamp(0.95rem, 1.4vw, 1.1rem);
-  font-weight: 600;
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  font-weight: 700;
   color: #2a3a4c;
 }
 
-.agenda-row__unit-label {
-  padding: 0.15rem 0.55rem;
+.agenda-row__meta-label {
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
   background: #e8f0fa;
   border: 1px solid #c5d8f0;
