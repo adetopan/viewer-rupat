@@ -1,15 +1,21 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { fetchRooms } from "../api";
 import { usePoll } from "../hooks/usePoll";
 import { useViewerFullscreen } from "../hooks/useViewerFullscreen";
 import { AgendaRow } from "../components/TvRoomPanel";
 import { ViewerTicker } from "../components/ViewerTicker";
+import { resolveTodayAgenda } from "../lib/agenda";
 
 export function Viewer() {
   useViewerFullscreen();
   const load = useCallback(() => fetchRooms(), []);
   const { data, error, loading } = usePoll(load, 8000);
-  const agenda = data?.todayAgenda ?? [];
+
+  const agenda = useMemo(() => {
+    if (!data) return [];
+    return resolveTodayAgenda(data.todayAgenda, data.rooms, data.serverTime);
+  }, [data]);
+
   const live = agenda.filter((a) => a.status === "berlangsung").length;
 
   return (
