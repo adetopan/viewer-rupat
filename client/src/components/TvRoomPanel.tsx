@@ -1,74 +1,59 @@
-import type { RoomSummary } from "../api";
-import { formatTime, statusLabel } from "../lib/format";
+import type { AgendaItem } from "../api";
+import { formatTime } from "../lib/format";
 
-export function TvRoomPanel({ room }: { room: RoomSummary }) {
-  const ongoing = room.currentBooking;
-  const upcoming = room.nextBooking;
+const weekdayShort: Record<number, string> = {
+  0: "Min",
+  1: "Sen",
+  2: "Sel",
+  3: "Rab",
+  4: "Kam",
+  5: "Jum",
+  6: "Sab",
+};
 
-  let activityTitle: string;
-  let activityDetail: string;
-  let activityLabel: string;
+const statusText: Record<AgendaItem["status"], string> = {
+  berlangsung: "Live",
+  akan_datang: "Akan datang",
+  selesai: "Selesai",
+};
 
-  if (room.status === "berlangsung" && ongoing) {
-    activityLabel = "Sedang berlangsung";
-    activityTitle = ongoing.title;
-    activityDetail = [
-      `${formatTime(ongoing.startAt)} – ${formatTime(ongoing.endAt)}`,
-      ongoing.organizer,
-      ongoing.department,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-  } else if (room.status === "akan_datang" && upcoming) {
-    activityLabel = "Akan dimulai";
-    activityTitle = upcoming.title;
-    activityDetail = [
-      `${formatTime(upcoming.startAt)} – ${formatTime(upcoming.endAt)}`,
-      upcoming.organizer,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-  } else if (upcoming) {
-    activityLabel = "Jadwal berikutnya";
-    activityTitle = upcoming.title;
-    activityDetail = `${formatTime(upcoming.startAt)} – ${formatTime(upcoming.endAt)}`;
-  } else {
-    activityLabel = "Kegiatan";
-    activityTitle = "—";
-    activityDetail = "Tidak ada rapat terjadwal hari ini";
-  }
-
-  if (room.status === "kosong" && !upcoming) {
-    activityTitle = "Tersedia";
-    activityDetail = "Ruang tidak digunakan";
-    activityLabel = "";
-  }
+export function AgendaRow({ item, index }: { item: AgendaItem; index: number }) {
+  const day = weekdayShort[new Date(item.startAt).getDay()] ?? "";
 
   return (
     <article
-      className={`tv-panel tv-panel--row tv-panel--${room.status}`}
-      aria-label={`${room.name}, ${statusLabel(room.status)}`}
+      className={`agenda-row agenda-row--${item.status}`}
+      style={{ animationDelay: `${index * 60}ms` }}
+      aria-label={`${item.title} di ${item.roomName}`}
     >
-      <div className="tv-panel__accent" aria-hidden="true" />
-      <div className="tv-panel__col tv-panel__col--room">
-        <h2 className="tv-panel__room">{room.name}</h2>
-        <p className="tv-panel__meta">
-          {room.floor ?? ""}
-          {room.capacity ? ` · ${room.capacity} orang` : ""}
+      <div className="agenda-row__timechip">
+        <span className="agenda-row__clock">
+          {formatTime(item.startAt)}
+          <span className="agenda-row__sep">–</span>
+          {formatTime(item.endAt)}
+        </span>
+        <span className="agenda-row__day">{day}</span>
+      </div>
+      <div className="agenda-row__body">
+        <p className="agenda-row__title">{item.title}</p>
+        <p className="agenda-row__place">
+          <svg viewBox="0 0 24 24" className="agenda-row__pin" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"
+            />
+          </svg>
+          <span>
+            {item.roomName}
+            {item.roomFloor ? ` · ${item.roomFloor}` : ""}
+          </span>
+          {item.organizer ? <span className="agenda-row__host">{item.organizer}</span> : null}
         </p>
       </div>
-      <div className="tv-panel__col tv-panel__col--status">
-        <span className={`badge badge--${room.status}`}>
-          {statusLabel(room.status)}
-        </span>
-        {activityLabel ? (
-          <p className="tv-panel__label">{activityLabel}</p>
-        ) : null}
-      </div>
-      <div className="tv-panel__col tv-panel__col--body">
-        <p className="tv-panel__title">{activityTitle}</p>
-        <p className="tv-panel__detail">{activityDetail}</p>
-      </div>
+      <span className={`agenda-row__badge agenda-row__badge--${item.status}`}>
+        {item.status === "berlangsung" ? <span className="pulse" /> : null}
+        {statusText[item.status]}
+      </span>
     </article>
   );
 }

@@ -36,9 +36,22 @@ export interface RoomRecord {
 
 const base = "";
 
+export interface AgendaItem {
+  id: string;
+  title: string;
+  organizer: string | null;
+  department: string | null;
+  startAt: string;
+  endAt: string;
+  roomName: string;
+  roomFloor: string | null;
+  status: "berlangsung" | "akan_datang" | "selesai";
+}
+
 export async function fetchRooms(): Promise<{
   serverTime: string;
   rooms: RoomSummary[];
+  todayAgenda?: AgendaItem[];
   ticker?: string;
 }> {
   const res = await fetch(`${base}/api/rooms`);

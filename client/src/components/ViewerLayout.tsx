@@ -17,8 +17,8 @@ export function ViewerLayout() {
         <div className="header-brand">
           <img src="/logo.png" alt="Kedokteran dan Kesehatan Polri" />
           <div className="header-titles">
+            <p className="header-kicker">Informasi ruang rapat</p>
             <h1>RS BHAYANGKARA TK I PUSDOKKES POLRI</h1>
-            {/* <p>Status Ruang Rapat</p> */}
           </div>
         </div>
         <div className="header-clock" aria-live="polite">

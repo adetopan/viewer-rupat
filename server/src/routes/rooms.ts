@@ -8,9 +8,40 @@ export const roomsRouter = Router();
 roomsRouter.get("/", async (_req, res) => {
   const now = new Date();
   const rooms = await prisma.room.findMany({ orderBy: { sortOrder: "asc" } });
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(now);
+  dayEnd.setHours(23, 59, 59, 999);
+
   const bookings = await prisma.booking.findMany({
     where: { endAt: { gte: now } },
     orderBy: { startAt: "asc" },
+  });
+
+  const todayBookings = await prisma.booking.findMany({
+    where: {
+      startAt: { lte: dayEnd },
+      endAt: { gte: dayStart },
+    },
+    include: { room: true },
+    orderBy: { startAt: "asc" },
+  });
+
+  const todayAgenda = todayBookings.map((b) => {
+    let status: "berlangsung" | "akan_datang" | "selesai" = "akan_datang";
+    if (now >= b.endAt) status = "selesai";
+    else if (now >= b.startAt) status = "berlangsung";
+    return {
+      id: b.id,
+      title: b.title,
+      organizer: b.organizer,
+      department: b.department,
+      startAt: b.startAt,
+      endAt: b.endAt,
+      roomName: b.room.name,
+      roomFloor: b.room.floor,
+      status,
+    };
   });
 
   const payload = rooms.map((room) => {
@@ -30,6 +61,7 @@ roomsRouter.get("/", async (_req, res) => {
   res.json({
     serverTime: now.toISOString(),
     rooms: payload,
+    todayAgenda,
     ticker: buildViewerTicker(now, rooms, bookings),
   });
 });
